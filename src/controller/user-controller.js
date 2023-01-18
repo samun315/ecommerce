@@ -1,6 +1,8 @@
 const asyncHandler = require("express-async-handler");
+const jwt = require("jsonwebtoken");
 const {
   getUserInfo,
+  getUserInfoByQuery,
   createUser,
   comparePassword,
   allUserInfo,
@@ -8,10 +10,12 @@ const {
   deleteUserById,
   editUser,
   blockSingleUser,
-  unblockSingleUser
+  unblockSingleUser,
 } = require("../services/user-service");
 const { generateToken } = require("../../config/jwt-token");
+const { generateRefreshToken } = require("../../config/refreshToken");
 
+// create user
 const addUser = asyncHandler(async (req, res) => {
   try {
     const email = req.body.email;
@@ -31,6 +35,7 @@ const addUser = asyncHandler(async (req, res) => {
   }
 });
 
+//update user
 const updateUser = asyncHandler(async (req, res) => {
   try {
     updatedInfo = await editUser(req);
@@ -40,12 +45,20 @@ const updateUser = asyncHandler(async (req, res) => {
   }
 });
 
+// login user
 const userLogin = asyncHandler(async (req, res) => {
   try {
     const { email, password } = req.body;
     const userInfo = await getUserInfo(email);
     const passwordMatch = await comparePassword(email, password);
     if (passwordMatch) {
+      const refreshToken = await generateRefreshToken(userInfo._id);
+      req.body = { _id: userInfo._id, refreshToken: refreshToken };
+      const updateUser = editUser(req);
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        maxAge: 72 * 60 * 60 * 1000,
+      });
       res.json({
         _id: userInfo._id,
         firstName: userInfo.firstName,
@@ -64,11 +77,54 @@ const userLogin = asyncHandler(async (req, res) => {
   }
 });
 
+//handle refresh token
+const handleRefreshToken = asyncHandler(async (req, res) => {
+  const cookie = req.cookies;
+  if (!cookie?.refreshToken)
+    throw new Error("No refresh token found in cookies!");
+  const refreshToken = cookie.refreshToken;
+  const query = { refreshToken: refreshToken };
+  const userInfo = await getUserInfoByQuery(query);
+  if (!userInfo) throw new Error("No refresh token found in DB");
+  jwt.verify(refreshToken, process.env.JWT_SECRET, async (err, decoded) => {
+    if (err || userInfo.id !== decoded.id) {
+      throw new Error("There is something wrong with refresh token");
+    }
+    const accessToken = await generateToken(userInfo._id);
+    res.json({ accessToken });
+  });
+});
+
+//logout
+const logout = asyncHandler(async (req, res) => {
+  const cookie = req.cookies;
+  if (!cookie?.refreshToken) throw new Error("No refresh token in cookies");
+  const refreshToken = cookie.refreshToken;
+  const userInfo = await getUserInfoByQuery({"refreshToken": refreshToken});
+  if (!userInfo) {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+    });
+    return res.sendStatus(204)  //forbiden
+  }
+
+  req.body = {_id: userInfo._id, refreshToken: "" }
+  const updateInfo = await editUser(req);
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: true,
+  });
+  return res.sendStatus(204);  //forbiden
+
+});
+// get all user
 const getAllUser = asyncHandler(async (req, res) => {
   const userInfos = await allUserInfo();
   res.send(userInfos);
 });
 
+//get single user
 const getSigleUser = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,6 +135,7 @@ const getSigleUser = asyncHandler(async (req, res) => {
   }
 });
 
+//delete user
 const deleteSigleUser = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
@@ -89,6 +146,7 @@ const deleteSigleUser = asyncHandler(async (req, res) => {
   }
 });
 
+//block user
 const blockUser = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
@@ -99,6 +157,7 @@ const blockUser = asyncHandler(async (req, res) => {
   }
 });
 
+//unblock user
 const unblockUser = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
@@ -117,5 +176,7 @@ module.exports = {
   deleteSigleUser,
   updateUser,
   blockUser,
-  unblockUser
+  unblockUser,
+  handleRefreshToken,
+  logout,
 };

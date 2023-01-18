@@ -5,7 +5,6 @@ const { getUserInfoById, getUserInfo } = require("../services/user-service");
 
 const authMiddleware = asyncHandler(async (req, res, next) => {
   let token;
-  //console.log("test: ", req.headers.authorization);
   if (req.headers.authorization.startsWith("Bearer")) {
     token = req.headers.authorization.split(" ")[1];
 

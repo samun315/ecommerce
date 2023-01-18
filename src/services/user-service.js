@@ -11,6 +11,14 @@ const getUserInfo = async (email) => {
   }
 };
 
+const getUserInfoByQuery = async (query)=>{
+  try {
+    return await User.findOne(query);
+  } catch (error) {
+    throw error;
+  }
+}
+
 const allUserInfo = async (req, res) => {
   try {
     return await User.find();
@@ -58,7 +66,7 @@ const createUser = async (req) => {
 
 const editUser = async (req, res) => {
   try {
-    const { _id } = req.user;
+    const { _id } = req.body;
     validateMongoDbId(_id);
     return await User.findByIdAndUpdate(
       _id,
@@ -67,6 +75,7 @@ const editUser = async (req, res) => {
         lastName: req?.body?.lastName,
         email: req?.body?.email,
         mobile: req?.body?.mobile,
+        refreshToken: req?.body?.refreshToken,
       },
       {
         new: true,
@@ -89,6 +98,7 @@ const comparePassword = async (email, password) => {
 
 module.exports = {
   getUserInfo,
+  getUserInfoByQuery,
   createUser,
   allUserInfo,
   comparePassword,

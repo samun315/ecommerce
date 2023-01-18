@@ -6,11 +6,13 @@ const app = express();
 const {errorHandler} = require('./src/middlewares/error-handler'); 
 const bodyParser = require("body-parser");
 const router = require("./src/routes");
+const cookieParser = require('cookie-parser');
 const PORT = process.env.PORT || 4000;
 dbConnect();  
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use(router);
 
