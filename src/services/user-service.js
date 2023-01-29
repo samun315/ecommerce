@@ -1,23 +1,22 @@
 const User = require("../models/user-model");
 const bcrypt = require("bcrypt");
-const {validateMongoDbId} = require("../utils/validateMongodbId");
+const { validateMongoDbId } = require("../utils/validateMongodbId");
 
 const getUserInfo = async (email) => {
   try {
-    const userInfo = User.findOne({ email: email });
-    return userInfo;
+    return await User.findOne({ email: email });
   } catch (error) {
     throw error;
   }
 };
 
-const getUserInfoByQuery = async (query)=>{
+const getUserInfoByQuery = async (query) => {
   try {
     return await User.findOne(query);
   } catch (error) {
     throw error;
   }
-}
+};
 
 const allUserInfo = async (req, res) => {
   try {
@@ -86,6 +85,19 @@ const editUser = async (req, res) => {
   }
 };
 
+const updatePassword = async (req, res) => {
+  const { _id } = req.user;
+  const { password } = req.body;
+  validateMongoDbId(_id);
+  const user = await getUserInfoById(_id);
+  if (password) {
+    user.password = password;
+    return await user.save();
+  } else {
+    return user;
+  }
+};
+
 const comparePassword = async (email, password) => {
   try {
     const userInfo = await getUserInfo(email);
@@ -107,4 +119,6 @@ module.exports = {
   editUser,
   blockSingleUser,
   unblockSingleUser,
+  updatePassword
 };
+

@@ -22,9 +22,9 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
     },
-    branding: {
+    brand: {
       type: String,
-      enum: ["Apple", "Samsung", "Lenovo"],
+      required: true,
     },
     sold: {
       type: Number,
@@ -39,7 +39,7 @@ const productSchema = new mongoose.Schema(
     },
     color: {
       type: String,
-      enum: ["Black", "Red", "Green"],
+      required: true,
     },
     ratings: [
       {
@@ -48,7 +48,9 @@ const productSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamp: true }
+  {
+    timestamps: true
+  }
 );
 
 module.exports = mongoose.model("Product", productSchema);
